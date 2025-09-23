@@ -10,15 +10,22 @@ int main(){
 
 	tree t;
 
-	t.insert("20", "20");
-    t.insert("10", "10");
-    t.insert("30", "30");
-    t.insert("5", "5");
-    t.insert("15", "15");
+// insert "Brandon" 45674567
+// insert "Brian" 35455565
+// insert "Briana" 87878787
+// insert "Bella" 95462138
+// printInorder
+// remove 45674567
+// removeInorder 2
+// printInorder
 
-	t.printInorder(t.getRoot());
-
-	
+	t.insert("Brandon", 45674567);
+	t.insert("Brian", 35455565);
+	t.insert("Briana", 87878787);
+	t.insert("Bella", 95462138);
+	t.printInorder();
+	t.remove(45674567);
+	t.printLevelCount();
 
 	return 0;
 }
