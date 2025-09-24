@@ -1,0 +1,29 @@
+28
+insert "Alice" 10000001
+insert "Bob" 10000001
+insert "Charlie" 12345
+insert "Al1ce" 10000002
+insert "" 10000003
+search "Alice"
+search "NonExistent"
+search 10000001
+search 99999999
+insert "David" 10000004
+insert "Eve" 10000005
+remove 10000004
+insert "Frank" 10000006
+insert "Grace" 10000007
+remove 10000005
+remove 88888888
+removeInorder 0
+removeInorder 2
+removeInorder 10
+printInorder
+printPreorder
+printPostorder
+insert "A" 20000001
+insert "B" 20000002
+insert "C" 20000003
+insert "C" 30000003
+insert "B" 30000002
+insert "A" 30000001

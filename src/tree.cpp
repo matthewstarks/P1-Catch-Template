@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cctype>
+#include <regex>
 using namespace std; 
 
 struct Node {
@@ -18,11 +19,31 @@ class tree {
 private:
     Node* root = nullptr;
 
+    bool isID(string& s){
+        regex ID("^[0-9]{8}$"); // cited from regex slide deck
+        return regex_match(s, ID);
+    }
+
+    bool isName(string& s){
+        regex name("^[A-Za-z ]+$"); // cited from regex slide deck
+        if(!regex_match(s, name)){
+            return false;
+        }
+
+        //at least one letter
+        for(char c : s){
+            if (isalpha(c)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     Node* insertNode(Node* n, string name, string ID) {
         if (n == nullptr) {
             return new Node(ID, name);
         }
-        if (stoi(ID) < stoi(n->ID)) {
+        if (ID < n->ID) {
             n->left = insertNode(n->left, name, ID);
         } 
         else{
@@ -47,13 +68,31 @@ private:
         return n;
     }
 
-    void printInorderHelper(Node* n){
+    void printInorderHelper(Node* n, vector<Node*>& nodes){
         if(n == nullptr){
             return;
         }
-        printInorderHelper(n->left);
-        cout << n->name << " ";
-        printInorderHelper(n->right);
+        printInorderHelper(n->left, nodes);
+        nodes.push_back(n);
+        printInorderHelper(n->right, nodes);
+    }
+
+    void printPostorderHelper(Node* n, vector<Node*>& nodes){
+        if(n == nullptr){
+            return;
+        }
+        printPostorderHelper(n->left, nodes);
+        printPostorderHelper(n->right, nodes);
+        nodes.push_back(n);
+    }
+
+    void printPreorderHelper(Node*n, vector<Node*>& nodes){
+        if(n == nullptr){
+            return;
+        }
+        nodes.push_back(n);
+        printPreorderHelper(n->left, nodes);
+        printPreorderHelper(n->right, nodes);
     }
 
     void searchNameHelper(Node* n, const string& name, vector<string>& ids){
@@ -94,6 +133,9 @@ private:
         n->height = 1 + max(height(n->left), height(n->right));
         newParent->height = 1 + max(height(newParent->left), height(newParent->right));
 
+        n->balanceFactor = balanceFactor(n);
+        newParent->balanceFactor = balanceFactor(newParent);
+
         return newParent;
     }
 
@@ -106,6 +148,9 @@ private:
 
         n->height = 1 + max(height(n->left), height(n->right));
         newParent->height = 1 + max(height(newParent->left), height(newParent->right));
+
+        n->balanceFactor = balanceFactor(n);
+        newParent->balanceFactor = balanceFactor(newParent);
 
         return newParent;
     }
@@ -136,14 +181,14 @@ private:
         }
     }
 
-    Node* removeNode(Node* n, int ID, bool &removed){
+    Node* removeNode(Node* n, string ID, bool& removed){
         if(n==nullptr){
             return nullptr;
         }
-        if (ID < stoi(n->ID)){
+        if (ID < n->ID){
             n->left = removeNode(n->left, ID, removed);
         }
-        else if (ID > stoi(n->ID)){
+        else if (ID > n->ID){
             n->right = removeNode(n->right, ID, removed);
         }
         else{
@@ -175,7 +220,7 @@ private:
                 n->ID = inorderSuccessor->ID;
                 n->name = inorderSuccessor->name;
                 //delete successor
-                n->right = removeNode(n->right, stoi(inorderSuccessor->ID), removed);
+                n->right = removeNode(n->right, inorderSuccessor->ID, removed);
             }
         }
         n->height = height(n);
@@ -186,9 +231,9 @@ private:
 
 public:
 
-    void remove(int ID){
+    void remove(string ID){
         bool removed = false;
-        root = removeNode(root,  ID, removed); //reassign root to possible new root
+        root = removeNode(root, ID, removed); //reassign root to possible new root
         if(removed){
             cout << "successful" << endl;
         }
@@ -207,44 +252,45 @@ public:
     //     return  !s.empty();
     // }
 
-    void insert(string name, int ID){
-        if(ID < 0){
-            throw invalid_argument("ID is negative");
-        }
-        if(name.empty()){
-            throw invalid_argument("Name cant be empty");
+    void insert(string name, string ID){
+        if(!isID(ID) || !isName(name)){
+            cout << "unsuccessful" << endl;
+            return;
+            // throw invalid_argument("Invalid name or ID");
         }
 
-        Node* existing = searchIDHelper(root, to_string(ID));
+        Node* existing = searchIDHelper(root, ID);
         if(existing != nullptr){
             cout << "unsuccessful" << endl;
             return;
         }
 
-        root = insertNode(root, name, to_string(ID));
+        root = insertNode(root, name, ID);
         cout << "successful" << endl;
     }
 
-    void search(int ID){
-        string strID = to_string(ID);
-        Node* val = searchIDHelper(root, strID);
-        if(val != nullptr){
-            cout << val->name << endl;
+    void search(string s){
+        if(isID(s)){
+            Node* result = searchIDHelper(root, s);
+
+            if(result == nullptr){
+                cout << "unsuccessful" << endl;
+            }
+            else{
+                cout << result->name << endl;
+            }
         }
         else{
-            cout << "unsuccessful" << endl;
-        }
-    }
+            vector<string> id;
+            searchNameHelper(root, s, id);
 
-    void search(string name){
-        vector<string> ids;
-        searchNameHelper(root, name, ids);
-
-        if (ids.empty()) {
-            cout << "unsuccessful" << endl;
-        } else {
-            for (auto& id : ids) {
-                cout << id << endl;
+            if(id.empty()){
+                cout << "unsuccessful" << endl;
+            }
+            else{
+                for (auto& id : id){
+                    cout << id << endl;
+                }
             }
         }
     }
@@ -253,30 +299,34 @@ public:
         return this->root;
     }
 
-    void printInorder(){ //prints names in tree
-        printInorderHelper(root);
+    void printInorder() {
+        vector<Node*> nodes;
+        printInorderHelper(root, nodes);
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            cout << nodes[i]->name;
+            if (i != nodes.size() - 1) cout << ", ";
+        }
+        cout << endl;
     }
 
-    void printPreorder(Node* root){ //prints names in tree
-        if (root == nullptr){
-            return;
+    void printPreorder() {
+        vector<Node*> nodes;
+        printPreorderHelper(root, nodes);
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            cout << nodes[i]->name;
+            if (i != nodes.size() - 1) cout << ", "; //cited from stackoverflow https://stackoverflow.com/questions/22702736/for-loop-prints-an-extra-comma
         }
-        else{
-            printPreorder(root->left);
-            printPreorder(root->right);
-            cout << root->name << " ";
-        }
+        cout << endl;
     }
 
-    void printPostorder(Node* root){ //prints names in tree
-        if (root == nullptr){
-            return;
+    void printPostorder() {
+        vector<Node*> nodes;
+        printPostorderHelper(root, nodes);
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            cout << nodes[i]->name;
+            if (i != nodes.size() - 1) cout << ", ";
         }
-        else{
-            printPostorder(root->left);
-            printPostorder(root->right);
-            cout << root->name << " ";
-        }
+        cout << endl;
     }
 
     int levelCountHelper(Node* n){
@@ -303,12 +353,14 @@ public:
         vector<Node*> nodes;
         inorderHelper(root, nodes);
 
-        if(n >= 0 && n < nodes.size()){
-            remove(stoi(nodes[n]->ID));
+        if(n < 0 || n >= nodes.size()){
+            cout << "unsuccessful." << endl;
+            return;
         }
-        else{
-            cout << "unsuccessful" << endl;
-        }
+        string removal = nodes[n]->ID;
+        bool removed2 = false;
+        root = removeNode(root, removal, removed2);
+        cout << "successful." << endl;
     }
 
 };
